@@ -7,25 +7,14 @@
       color="grey-lighten-4"
     >
       <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
-      <span class="title ml-3 mr-5">I&nbsp;<span class="font-weight-light">Planner</span></span>
+      <span class="title ml-3 mr-5">I&nbsp;<span class="font-weight-light">Planner </span></span>
       <v-spacer></v-spacer>
-       <v-tooltip bottom>
-      <template v-slot:activator="{ on, attrs }">
-        <v-btn
-          icon
-          color="primary"
-          dark
-          v-bind="attrs"  
-          v-on="on"
-        ><v-icon>notifications</v-icon></v-btn>
-      </template>
-      <span>Reminders</span>
-    </v-tooltip>
+        
     <v-tooltip bottom>
       <template v-slot:activator="{ on, attrs }">
         <v-btn
           icon
-          color="primary"
+          color="#043353"
           dark
           v-bind="attrs"
           v-on="on"
@@ -34,6 +23,45 @@
       </template>
       <span>Logout</span>
     </v-tooltip>
+
+
+<div class="text-center">
+    <v-menu offset-y>
+      <template v-slot:activator="{ on, attrs }">
+         <v-btn
+          icon
+          color="#043353"
+          dark
+          v-bind="attrs"  
+          v-on="on"
+        > <v-badge
+        :content="count"
+        :value="count"
+        color="red"
+        overlap
+        
+      >
+        <v-icon large>notifications</v-icon>
+      </v-badge></v-btn>
+      </template>
+      <v-list>
+        <v-list-item
+          
+        >
+          <v-list-item-title v-for="assigncard in assigncards"
+          :key="assigncard.id">{{ assigncard.assignto }}</v-list-item-title>
+          
+        </v-list-item>
+      </v-list>
+    </v-menu>
+  </div>
+
+
+
+
+
+
+    
     </v-app-bar>
 
     <v-navigation-drawer
@@ -86,35 +114,64 @@
         </template>
       </v-list>
     </v-navigation-drawer>
-    <v-container class="my-5" fluid>
-    <v-slide-y-transition mode="out-in">
-      <v-layout row align-left wrap>
-        <v-flex xs12><h2> {{groupboardname}} </h2></v-flex>
-        <v-flex sm3 v-for="list in lists" :key="list.listname" pa-1>
-          <v-card>
+    <v-container class="my-0" fluid >
+        <v-progress-circular
+        v-if:="progress"
+      :size="70"
+      :width="7"
+      color="purple"
+    ></v-progress-circular>
+      <div class="display-2"> {{boardname}} </div>
+      <hr>
+      
+    <v-layout style="overflow-x: scroll">
+      <v-flex xs12>
+      <v-layout>
+        <v-flex sm3 xs12 md4 lg3 v-for="list in lists" :key="list.listname" px-1 pt-1 >
+          <v-card @dragover="setdroppinglist($event,list)" color="#043353" :class="{'green lighten-4':droppinglist==list}" width="500px" mt-auto>
             <v-card-title primary-title color="primary">
               <div class="headline" >
+                <span class="white--text">
                 {{list.listname}}
+                </span>
               </div>
             </v-card-title>
-            <v-card v-for="card in cards" :key=card.card_id>
-             {{cardname}}
-            </v-card>
-             <v-text-field
-            label="Add Card"
-            outlined
-            full-width
-            prepend-inner-icon="add"
-            v-model="cardname"
-          ></v-text-field>
+            <div xs12 sm6 md4 lg3 v-for="card in cards" :key="card.card_id" class="ma-1 ">
+              <v-card width="400px" color="grey-lighten-4" pa-1 v-if="card.list_id == list.slug" 
+              draggable="true" @dragstart="startdraggingcard(card)" @dragend="dropcard()">
+                <v-container fluid grid-list-lg color="grey-lighten-4">
+                  <v-layout row >
+                    <v-flex xs12 class="pa-2">
+                      <div color="grey-lighten-4">
+                <div class="subtitle text-capitalize" color="grey-lighten-4">{{card.cardname}} <v-spacer></v-spacer> </div>
+
+            <v-tooltip bottom v-if="date_reminder(card.Duedate) == 'true'">
+            <template v-slot:activator="{ on, attrs }">
+              
+              <v-icon  color="red" v-bind="attrs"
+                v-on="on" >info </v-icon>
+            </template>
+            <span>Due Date: {{card.Duedate}}</span>
+          </v-tooltip>
+
+
+         <v-icon small right @click="open_modal(card.cardname,card.card_id,card.Description,card.Duedate)" > create</v-icon> 
+ </div>
+                  
+                    </v-flex>
+                  </v-layout>
+                </v-container>
+              </v-card>
+          
+            </div>
             <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="primary" text @click="createCardUnderList">ADD</v-btn>
+              <Createcard :list_id="list.id" :bid="$route.params.slug">
+              </Createcard>
             </v-card-actions>
           </v-card>
         </v-flex>
         <v-flex sm3 pa-2>
-          <v-card width="300px">
+          <v-card width="500px" mt-auto>
            <v-card-title primary-title style="flex-direction:column">
               <div class="headline">Create lists</div>
               <div><v-form>
@@ -128,83 +185,79 @@
 
           </v-card>
         </v-flex>
-
+ <v-flex xs3>
+          <v-card class="" width="1000px">
+            <v-card-title>Activities</v-card-title>
+            <div v-for="activity in activitiesbydate" :key="activity.activity_id">
+              <div class="overline pa-2" >{{activity.activitytext}}</div>
+            </div>
+          </v-card>
+        </v-flex>
       </v-layout>
-    </v-slide-y-transition>
-  
-    <template>
-     <v-row justify="end" ma-2>
-       <v-dialog v-model="dialog" persistent max-width="600px">
-         <template v-slot:activator="{ on, attrs }">
-     <v-btn class="mx-2" fab dark color="indigo"
-      v-bind="attrs"
-      v-on="on"
-          >
-      <v-icon dark
-          >mdi-plus</v-icon>
-    </v-btn>
-         </template>
-          <v-card>
-        <v-card-title>
-          <span class="headline">ADD TASK</span>
-        </v-card-title>
-        <v-card-text>
-          <v-container>
-            <v-row>
-              <v-col cols="12">
-                 
-                <v-text-field label="Title*" required v-model="title"></v-text-field>
-              </v-col>
-              <v-col cols="12" sm="6">
-                <v-select
-                v-model="priority"
-                  :items="['High', 'Medium', 'Low']"
-                  label="Priority*"
-                  required
-                ></v-select>
-              </v-col>
-              <v-col cols="12" sm="6" md="4">
-      <v-dialog
-        ref="dialog"
-        v-model="modal"
-        :return-value.sync="date"
-        persistent
-        width="290px"
-      >
-        <template v-slot:activator="{ on, attrs }">
-          <v-text-field
-            v-model="date"
-            label="Picker in dialog"
-            prepend-icon="event"
-            readonly
-            v-bind="attrs"
-            v-on="on"
-          ></v-text-field>
-        </template>
-        <v-date-picker v-model="date" scrollable>
-          <v-spacer></v-spacer>
-          <v-btn text color="primary" @click="modal = false">Cancel</v-btn>
-          <v-btn text color="primary" @click="$refs.dialog.save(date)">OK</v-btn>
-        </v-date-picker>
-      </v-dialog>
-    </v-col>
-            </v-row>
-          </v-container>
-          <small>*indicates required field</small>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="blue darken-1" text @click="dialog = false">Close</v-btn>
-          <v-btn color="blue darken-1" text @click="addTask" :loading="loading">Save</v-btn>
-        </v-card-actions>
-      </v-card>
-       </v-dialog>
-  </v-row>
-    </template>
-
+      </v-flex>
+       
+      </v-layout> 
     </v-container>
    
   </v-app>
+    <v-row justify="center">
+        <v-dialog v-model="card_details" persistent max-width="800px">
+           <v-card>
+        <v-card-title class="headline text-capitalize">{{num}} </v-card-title>        
+           <v-col cols="16"> <v-text-field label="Description" required v-model="Description"
+            @click="savedescription=false" ></v-text-field>
+             {{cardDescription}}
+              </v-col>
+              <v-btn  color="green darken-1" text v-model="savedescription" :disabled="savedescription" @click="savedescriptionindb()">Save</v-btn>
+              <v-col cols="12"> <v-text-field label="Comment" required v-model="Comment" @click="savecomment=false"></v-text-field>
+              </v-col>
+               <v-btn color="blue darken-1" text v-model="savecomment" :disabled="savecomment">ADD</v-btn>
+        <v-card-text class="mt-4 mb-0">ADD TO CARD </v-card-text>
+       <v-col class="d-flex" cols="12" sm="6">
+        <v-select
+          :items="members"
+          label="members"
+          outlined
+          v-model="membermail"
+        ></v-select>
+        <v-btn class="ml-2" @click="assigncard"> ASSIGN</v-btn>
+      </v-col>
+        <v-btn large text mt-0 @click="opendate"><v-icon>today</v-icon>DUE DATE</v-btn ><span>{{duedate}}</span>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="green darken-1" text @click="card_details = false">Close</v-btn>
+          <v-btn color="green darken-1" text @click="card_details = false">Save</v-btn>
+        </v-card-actions>
+      </v-card>
+                    </v-dialog>
+                    </v-row>
+  <v-dialog v-model="datepicker" scrollable max-width="370px">
+      <v-card>
+        <v-card-title>DUE DATE</v-card-title>
+        <v-divider></v-divider>
+        <v-card-text style="height: 700px;">
+  <v-row>
+    <v-col> <v-text-field outlined label="Date" v-model="date"></v-text-field></v-col>
+    
+    <v-col> <v-text-field outlined label="Time" v-model="dateinside"></v-text-field></v-col>
+    <v-date-picker class="ma-auto" v-model="date"></v-date-picker>
+    <v-card-subtitle> Set Reminder</v-card-subtitle>
+     <v-select
+          :items="items2"
+          label="Reminder"
+          outlined
+        ></v-select>
+        <v-card-actions>
+          <v-btn color="blue darken-1" text @click="updateDate">Save</v-btn>
+          <v-btn color="red darken-1" text @click="dialog = false">Remove</v-btn>
+        </v-card-actions>
+  </v-row>
+
+        </v-card-text>
+        <v-divider></v-divider>
+      </v-card>
+    </v-dialog>
+  
 </div>
 </template>
 
@@ -213,155 +266,288 @@
 import firebase from "../firebase";
 import 'firebase/auth'
 const db = firebase.firestore();
+import Createcard from './Createcard';
 export default {
 name: 'groupboards',
+components:{
+  Createcard
+},
   data(){
     return{
+      progress:false,
+    draggingcard:null,
+    droppinglist:null,
+    membermail:'',
     drawer: false,
     dialog: false,
+    card_details:false,
+    datepicker:false,
     title:'',
-    groupboardname:null,
-    groupslug:'',
+    boardname:null,
+    Description:'',
+    Comment:'',
+    cardDescription:'',
+    slug:'',
     priority:null,
     listname:'',
     board_id:'',
-    groupbid:'',
-    groupbidcontainer:'',
+    bid:'',
+    bidcontainer:'',
     cardname:'',
     card_id:'',
-
-
+    num:'asa',
+    cid:'',
+    activitytext:'',
     list_id:'',
+    activity_id:'',
+    savedescription:true,
+    savecomment:true,
     due:null,
+    assignto:'',
+    assignedby:'',
+    holdownerid:'7fEYMfbRB4aZ8FQkJyzHtYveKp43',
+    duedate:"",
+    count:0,
     username:'',
     isloggedin:false,
     loading:false,
+    dateinside:'',
     currentUser:false,
       date: new Date().toISOString().substr(0, 10),
       modal:false,
    items: [
-      { icon: 'today', text: 'TASKS', route:'/user' },
+      { icon: 'today', text: 'BOARDS', route:'/user' },
       { icon: 'notes', text: 'NOTES', route:'/notes' },
       
     ],
+    items2: ['1 day before', '2 days before', '1 hour before', '2 hours before'],
+    
 
-    groupboards:[],
+    boards:[],
     tasks:[],
     lists:[],
     cards:[],
+    assigncards:{},
+    members :[],
+    activities:[],
     inprogresstasks:[],
     completedtasks:[],
     
     }
     
   },
-    beforeRouteEnter(to,from,next){
-         var user = firebase.auth().currentUser;
-      db.collection('users').doc(user.uid).collection('groupgroupboards').where('groupslug', '==', to.params.groupslug).get()
-      .then(querySnapshot=>{
-          querySnapshot.forEach(doc=>{
-              next(vm=>{
-                  vm.groupboardname=doc.data().groupboardname
-                  vm.groupbid=doc.data().groupslug
-                  })
-                  })
-                  })
-    },
+    // beforeRouteEnter(to,from,next){
+    //      var user = firebase.auth().currentUser;
+    //   db.collection('users').doc(user.uid).collection('boards').where('slug', '==', to.params.slug).get()
+    //   .then(querySnapshot=>{
+    //       querySnapshot.forEach(doc=>{
+    //           next(vm=>{
+    //               vm.boardname=doc.data().boardname
+    //               vm.bid=doc.data().slug
+    //               })
+    //               })
+    //               })
+    // },
     watch:{
         '$route': 'fetchdata'
     },
      
   methods:{
+     assigncard(){
+            this.assign_id=this.generateUUID()
+            var user=firebase.auth().currentUser;
+            if(user &&this.susername!=''){
+            db.collection('assignedcards').doc(this.assign_id).set({
+                assignto:this.membermail,
+                board_id:this.bid,
+                 cardname:this.num,
+                 assignedby:user.uid,
+                 
+              })
+              this.susername=''  
+            }
+        },
+    
+    date_reminder($date_val){
+        var current_date = new Date();
+        var due_date = new Date($date_val);
+        var days = (due_date - current_date) / (24*3600*1000);
+        // console.log('Date is: '+( (due_date - current_date) / (24*3600*1000)))
+        if(days <= 3){
+          return 'true'
+        }
+        return 'false'
+    },
+    notifications(){
+      
+      var user =firebase.auth().currentUser;
+      console.log(user.email)
+      this.currentUser=firebase.auth().currentUser.email;
+      db.collection('assignedcards').where('assignto','==',user.email).get().then(querySnapshot=>{
+        querySnapshot.forEach(doc=>{
+          const data={
+            'id':doc.id,
+            'asssignto':doc.data().assignto,
+            'board_id':doc.data().board_id,
+            'assignedby':doc.data().assignedby,
+            'cardname':doc.cardname,
+
+          }
+          console.log(data)
+          this.assigncards.push(data);
+          this.count=this.count+1;
+          console.log(this.assigncards)
+          console.log("Hello wo" + data)
+      
+        })
+      })
+    },
+    fetchmembers(){
+         this.bid=this.$route.query.groupslug;
+           this.bid=this.$route.params.groupslug;
+      db.collection('members').where('board_id','==',this.bid).get().then(querySnapshot=>{
+        querySnapshot.forEach(doc=>{
+          const data={
+            'id':doc.id,
+            'boardname':doc.data().boardname,
+            'board_id':doc.data().board_id,
+            'email':doc.data().email,
+            'member_id':doc.data.member_id,
+            'owner_id':doc.data.owner_id,
+            'username':doc.data.username
+          }
+          this.members.push(doc.data().email);
+          console.log(data);
+          console.log(doc.data())
+        })
+      })
+    },
+
+     open_modal(value,cid,cardDescription,duedate){
+      this.num = value;
+      this.cid = cid;
+      this.cardDescription=cardDescription
+      this.duedate=duedate;
+      this.card_details=!this.card_details
+    },
+    updateDate(){
+         
+           this.currentUser=firebase.auth().currentUser.email;
+            db.collection('users').doc(this.holdownerid).collection('boards').doc(this.bid)
+           .collection('cards').doc(this.cid).update({Duedate: this.date})
+           this.Description=""
+            this.datepicker=!this.datepicker;
+    },
+    opendate(){
+      this.datepicker=!this.datepicker;
+    },
        fetchdata(){
-            var user = firebase.auth().currentUser;
-             db.collection('users').doc(user.uid).collection('groupboards').where('groupslug','==', this.$route.params.groupslug).get()
+            
+             db.collection('users').doc(this.holdownerid).collection('boards').where('slug','==', this.$route.params.slug).get()
              .then(querySnapshot=>{
                  querySnapshot.forEach(doc=>{
-                     this.groupboardname=doc.data().groupboardname
-                     this.groupslug=doc.data().groupslug
-                     this.groupbid=doc.data().groupslug
+                     this.boardname=doc.data().boardname
+                     this.slug=doc.data().slug
+                     this.bid=doc.data().slug
                      
                  })
              })
         },
-        listTask(){
+
+        startdraggingcard(card){
+          console.log('started dragging',card);
+          this.draggingcard=card;
+        },
+
+        setdroppinglist(event, list){
+          this.droppinglist=list;
+          event.preventDefault();
+        },
+
+
+        dropcard(){
            var user = firebase.auth().currentUser;
            this.currentUser=firebase.auth().currentUser.email;
-           this.groupbid=this.$route.query.groupslug;
-           this.groupbid=this.$route.params.groupslug;
-           db.collection('users').doc(user.uid).collection('groupboards').
-           doc(this.groupbid).collection('lists').get().then(querySnapshot=>{
+          if(this.droppinglist){
+            if(this.draggingcard.list_id!==this.droppinglist.slug){
+              const fromlist=this.lists.find(list=>list.slug=== this.draggingcard.list_id)
+              db.collection('users').doc(this.holdownerid).collection('boards').doc(this.bid)
+           .collection('cards').doc(this.draggingcard.card_id).update({list_id: this.droppinglist.slug})
+           this.createlistactivity(`${user.email} moved ${this.draggingcard.cardname} from ${fromlist.listname} to ${this.droppinglist.listname}`)
+           console.log(this.draggingcard.list_id,this.droppinglist.slug )
+             this.draggingcard.list_id=this.droppinglist.slug;
+            } }
+        this.droppinglist=null;
+        this.draggingcard=null;
+        },
+        savedescriptionindb(){
+          
+           this.currentUser=firebase.auth().currentUser.email;
+            db.collection('users').doc(this.holdownerid).collection('boards').doc(this.bid)
+           .collection('cards').doc(this.cid).update({Description: this.Description})
+           this.Description=""
+           console.lo('check'+this.card_id,this.bid)
+        },
+        listTask(){
+           console.log("List Task"+this.holdownerid)
+           this.currentUser=firebase.auth().currentUser.email;
+           this.bid=this.$route.query.groupslug;
+           this.bid=this.$route.params.groupslug;
+           db.collection('users').doc(this.holdownerid).collection('boards').
+           doc(this.bid).collection('lists').get().then(querySnapshot=>{
              querySnapshot.forEach(doc=>{
                const data={
                  'id':doc.id,
                  'listname': doc.data().listname,
-                 'groupslug':doc.data().groupslug
+                 'slug':doc.data().slug
                  
                }
-              this.list_id=doc.data().groupslug;
+              this.list_id=doc.data().slug;
                console.log(data);
                console.log(this.list_id);
-               console.log(doc.data().groupslug);
+               console.log(doc.data().slug);
              })
            })  
         },
          getList(){
-           var user = firebase.auth().currentUser;
+          
            this.currentUser=firebase.auth().currentUser.email;
-           this.groupbid=this.$route.query.groupslug;
-           this.groupbid=this.$route.params.groupslug;
-           db.collection('users').doc(user.uid).collection('groupboards').doc(this.groupbid).collection('lists')
-           .where('board_id','==',this.groupbid).get().then(querySnapshot=>{
+           this.bid=this.$route.query.groupslug;
+           this.bid=this.$route.params.groupslug;
+           db.collection('users').doc(this.holdownerid).collection('boards').doc(this.bid).collection('lists')
+           .where('board_id','==',this.bid).get().then(querySnapshot=>{
              querySnapshot.forEach(doc=>{
                const data={
                  'id':doc.id,
                  'listname': doc.data().listname,
-                 'groupslug':doc.data().groupslug
+                 'slug':doc.data().slug
                  
                }
               this.lists.push(data);
                 console.log(this.list_id);
                console.log(data);
-               console.log(doc.data().groupslug);
+               console.log("slug"+doc.data().slug);
              
              })
            })  
         },
-        listCard(){
-           var user = firebase.auth().currentUser;
-           this.currentUser=firebase.auth().currentUser.email;
-           this.groupbid=this.$route.query.groupslug;
-           this.groupbid=this.$route.params.groupslug;
-           db.collection('users').doc(user.uid).collection('groupboards').
-           doc(this.groupbid).collection('lists').doc(this.list_id).collection('cards').get().then(querySnapshot=>{
-             querySnapshot.forEach(doc=>{
-               const data={
-                 'id':doc.id,
-                 'cardname': doc.data().cardname,
-                 'card_id':doc.data().card_id
-                 
-               }
-              this.list_id=doc.data().list_id;
-               console.log(data);
-               console.log(this.list_id);
-               console.log(doc.data().groupslug);
-             })
-           })  
-        },
+       
          getCardUnderList(){
-           var user = firebase.auth().currentUser;
+        
            this.currentUser=firebase.auth().currentUser.email;
-           this.groupbid=this.$route.query.groupslug;
-           this.groupbid=this.$route.params.groupslug;
-           db.collection('users').doc(user.uid).collection('groupboards').doc(this.groupbid)
-           .collection('lists').doc(this.list_id).collection('cards').
-           where('list_id','==',this.list_id).get().then(querySnapshot=>{
+           this.bid=this.$route.query.groupslug;
+           this.bid=this.$route.params.groupslug;
+           db.collection('users').doc(this.holdownerid).collection('boards').doc(this.bid)
+           .collection('cards').get().then(querySnapshot=>{
              querySnapshot.forEach(doc=>{
                const data={
                  'id':doc.id,
                  'cardname': doc.data().cardname,
                  'card_id':doc.data().card_id,
-                  'list_id':doc.data().list_id
+                  'list_id':doc.data().list_id,
+                  'board_id':doc.data().board_id,
+                  'Description':doc.data().Description,
+                   'Duedate':doc.data().Duedate
                }
               this.cards.push(data);
                 console.log(this.list_id);
@@ -371,19 +557,41 @@ name: 'groupboards',
              })
            }) 
         },
+        getOwnerId(){
+                  this.bid=this.$route.query.groupslug;
+           this.bid=this.$route.params.groupslug;
+      db.collection('members').where('board_id','==',this.bid).get().then(querySnapshot=>{
+        querySnapshot.forEach(doc=>{
+          const data={
+            'id':doc.id,
+            'boardname':doc.data().boardname,
+            'board_id':doc.data().board_id,
+            'email':doc.data().email,
+            'member_id':doc.data().member_id,
+            'owner_id':doc.data().owner_id,
+            'username':doc.data().username
+          }
+       
+          console.log(data)
+          this.holdownerid=doc.data().owner_id
+          // console.log(this.holdownerid);
+      })
+      })
+        },
+
     testing(){
-       var user = firebase.auth().currentUser;
+       
            this.currentUser=firebase.auth().currentUser.email;
-           db.collection('users').doc(user.uid).collection('groupboards')
-           .doc(this.groupbidcontainer).collection('lists').orderBy('groupboardname').get().then(querySnapshot=>{
+           db.collection('users').doc(this.holdownerid).collection('boards')
+           .doc(this.bidcontainer).collection('lists').orderBy('boardname').get().then(querySnapshot=>{
              querySnapshot.forEach(doc=>{
                const data={
-                 'groupboardname': doc.data().groupboardname,
-                 'groupslug':doc.data().groupslug
+                 'boardname': doc.data().boardname,
+                 'slug':doc.data().slug
                  
                }
-               this.groupboards.push(data);
-               console.log(doc.data().groupslug);
+               this.boards.push(data);
+               console.log(doc.data().slug);
              })
            })  
     },
@@ -410,37 +618,52 @@ name: 'groupboards',
             var user=firebase.auth().currentUser;
             this.list_id=this.generateUUID()
             if(user &&this.listname!=''){
-               db.collection('users').doc(user.uid).collection('groupboards').doc(this.groupbid).collection('lists').doc(this.list_id).set({
+               db.collection('users').doc(user.uid).collection('boards').doc(this.bid)
+               .collection('lists').doc(this.list_id).set({
                 listname:this.listname,
-                groupslug:this.list_id,
-                board_id:this.groupbid
+                slug:this.list_id,
+                board_id:this.bid
               })
+              this.createlistactivity(`${user.email} created list ${this.listname}`)
               this.listname=''
               this.lists.splice(0,this.lists.length)
-              this.getCard()
-             
-              
-            }
-          },
-              createCardUnderList(){
-            var user=firebase.auth().currentUser;
-            this.card_id=this.generateUUID()
-            if(user &&this.cardname!=''){
-              
-               db.collection('users').doc(user.uid).collection('groupboards').doc(this.groupbid).collection('lists')
-               .doc(this.list_id).collection('cards').doc(this.card_id)
-               .set({
-                cardname:this.cardname,
-                card_id:this.card_id,
-                list_id:this.list_id
-              })
-              
-              this. cards.splice(0,this.cards.length)
-              this.cardname=''
-             this.getCardUnderList();
-              console.log("success");
+              this.getList() 
               }
           },
+          createlistactivity(text){
+             var user=firebase.auth().currentUser;
+            this.activity_id=this.generateUUID()
+               db.collection('users').doc(user.uid).collection('boards').doc(this.bid)
+               .collection('activities').doc(this.activity_id).set({
+                 activitytext:text,
+                activity_id:this.activity_id,
+                board_id:this.bid,
+                list_id:this.list_id
+                   })
+                     this.activities.splice(0,this.lists.length)
+                     this.getlistactivity()
+                   console.log('done');
+          },
+          getlistactivity(){
+            var user = firebase.auth().currentUser;
+           this.currentUser=firebase.auth().currentUser.email;
+           this.bid=this.$route.query.groupslug;
+           this.bid=this.$route.params.groupslug;
+           db.collection('users').doc(user.uid).collection('boards').doc(this.bid)
+           .collection('activities').get().then(querySnapshot=>{
+             querySnapshot.forEach(doc=>{
+               const data={
+                 'id':doc.id,
+                 'activitytext': doc.data().activitytext,
+                 'activity_id':doc.data().activity_id,
+                  'list_id':doc.data().list_id,
+                  'board_id':doc.data().board_id
+               }
+              this.activities.push(data);
+             })
+           }) 
+          },
+              
 
           logout(){
             firebase.auth().signOut().then(()=>
@@ -464,16 +687,54 @@ name: 'groupboards',
           },
           update(){
 
+          },
+
+          realtimeupdate(){
+            this.bid=this.$route.query.groupslug;
+           this.bid=this.$route.params.groupslug;
+        // var user = firebase.auth().currentUser;
+         db.collection('users').doc(this.holdownerid).collection('boards').doc(this.bid).collection('cards').onSnapshot(res=>{
+         const changes=res.docChanges();
+          changes.forEach(change=>{
+            if(change.type=='added'){
+              this.cards.push({...change.doc.data(),
+              id:change.doc.id
+              })
+            }
+          })
+        })
+        
           }
+          
+  },
+  computed:{
+    cardsbylistid(){
+      return this.cards.reduce((byid,card)=>{
+        byid[card.list_id]=byid[card.list_id]||byid[card.list_id].push(card);
+        return byid;
+      })
+    },
+    activitiesbydate(){
+      return this.activities.slice().reverse();
+    }
   },
   mounted(){
+    this.getOwnerId();
+    console.log("Hello " + this.holdownerid)
     this.listTask();
     this.getList();
-    this.getCardUnderList();
+    this.getlistactivity();
+    this.date_reminder()
+    // this.listTask();
+          this.fetchmembers();
+          this.notifications();
+          this.realtimeupdate()
   },
    created(){
-          this.listTask();
-          this.listCard();
+     
+     
+          
+         
          
   },
  

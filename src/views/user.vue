@@ -126,7 +126,8 @@
  <v-layout row align-left wrap ma-5>
         <v-flex sm3 v-for="member in members" :key="member.board_id" pa-1>       
           <v-card raised >
-               <router-link   v-bind:to="{ name: 'boards', params:{slug: member.board_id }}">
+            
+               <router-link :to="{ name: 'groupboards', params: { groupslug: member.board_id }}">
             <v-card-title primary-title>
                 {{member.boardname}}
             </v-card-title></router-link>

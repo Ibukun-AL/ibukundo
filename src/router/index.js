@@ -75,8 +75,9 @@ export default new VueRouter({
             //     requiresAuth: true
             // }
         },
+        
         {
-            path: '/groupboard/:groupslug',
+            path: '/groupboards/:groupslug',
             name: 'groupboards',
             component: groupboards,
             meta: {

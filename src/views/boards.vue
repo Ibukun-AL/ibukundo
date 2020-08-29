@@ -362,7 +362,7 @@ components:{
     notifications(){
       var user =firebase.auth().currentUser;
       this.currentUser=firebase.auth().currentUser.email;
-      db.collection('members').where('assignto','==',user.email).get().then(querySnapshot=>{
+      db.collection('assingcards').where('assignto','==',user.email).get().then(querySnapshot=>{
         querySnapshot.forEach(doc=>{
           const data={
             'id':doc.id,
@@ -665,6 +665,7 @@ components:{
      this.bid=this.$route.query.slug;
            this.bid=this.$route.params.slug;
         var user = firebase.auth().currentUser;
+        
          db.collection('users').doc(user.uid).collection('boards').doc(this.bid).collection('cards').onSnapshot(res=>{
          const changes=res.docChanges();
           changes.forEach(change=>{
