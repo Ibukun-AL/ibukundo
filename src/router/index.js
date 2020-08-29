@@ -71,9 +71,9 @@ export default new VueRouter({
             path: '/board/:slug',
             name: 'boards',
             component: boards,
-            meta: {
-                requiresAuth: true
-            }
+            // meta: {
+            //     requiresAuth: true
+            // }
         },
         {
             path: '/groupboard/:groupslug',

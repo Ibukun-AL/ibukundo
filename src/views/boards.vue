@@ -17,7 +17,15 @@
           dark
           v-bind="attrs"  
           v-on="on"
-        ><v-icon>notifications</v-icon></v-btn>
+        > <v-badge
+        :content="count"
+        :value="count"
+        color="red"
+        overlap
+        
+      >
+        <v-icon large>notifications</v-icon>
+      </v-badge></v-btn>
       </template>
       <span>Reminders</span>
     </v-tooltip>
@@ -86,15 +94,21 @@
         </template>
       </v-list>
     </v-navigation-drawer>
-    <v-container class="my-5" fluid>
+    <v-container class="my-0" fluid >
+        <v-progress-circular
+        v-if:="progress"
+      :size="70"
+      :width="7"
+      color="purple"
+    ></v-progress-circular>
       <div class="display-2"> {{boardname}} </div>
       <hr>
       
-    <v-layout>
-      <v-flex xs9>
-      <v-layout row wrap>
-        <v-flex sm3 v-for="list in lists" :key="list.listname" px-2 pt-5 >
-          <v-card @dragover="setdroppinglist($event,list)" color="#043353" :class="{'green lighten-4':droppinglist==list}">
+    <v-layout style="overflow-x: scroll">
+      <v-flex xs12>
+      <v-layout>
+        <v-flex sm3 xs12 md4 lg3 v-for="list in lists" :key="list.listname" px-1 pt-1 >
+          <v-card @dragover="setdroppinglist($event,list)" color="#043353" :class="{'green lighten-4':droppinglist==list}" width="500px" mt-auto>
             <v-card-title primary-title color="primary">
               <div class="headline" >
                 <span class="white--text">
@@ -102,23 +116,34 @@
                 </span>
               </div>
             </v-card-title>
-            <v-flex xs12 class="pa-1" v-for="card in cards" :key="card.card_id">
-              <v-card color="grey-lighten-4" pa-4 v-if="card.list_id == list.slug" 
+            <div xs12 sm6 md4 lg3 v-for="card in cards" :key="card.card_id" class="ma-1 ">
+              <v-card width="400px" color="grey-lighten-4" pa-1 v-if="card.list_id == list.slug" 
               draggable="true" @dragstart="startdraggingcard(card)" @dragend="dropcard()">
                 <v-container fluid grid-list-lg color="grey-lighten-4">
                   <v-layout row >
                     <v-flex xs12 class="pa-2">
                       <div color="grey-lighten-4">
                 <div class="subtitle text-capitalize" color="grey-lighten-4">{{card.cardname}} <v-spacer></v-spacer> </div>
+
+            <v-tooltip bottom v-if="date_reminder(card.Duedate) == 'true'">
+            <template v-slot:activator="{ on, attrs }">
+              
+              <v-icon  color="red" v-bind="attrs"
+                v-on="on" >info </v-icon>
+            </template>
+            <span>Due Date: {{card.Duedate}}</span>
+          </v-tooltip>
+
+
          <v-icon small right @click="open_modal(card.cardname,card.card_id,card.Description,card.Duedate)" > create</v-icon> 
-                    </div>
+ </div>
                   
                     </v-flex>
                   </v-layout>
                 </v-container>
               </v-card>
           
-            </v-flex>
+            </div>
             <v-card-actions>
               <Createcard :list_id="list.id" :bid="$route.params.slug">
               </Createcard>
@@ -126,7 +151,7 @@
           </v-card>
         </v-flex>
         <v-flex sm3 pa-2>
-          <v-card width="300px" mt-auto>
+          <v-card width="500px" mt-auto>
            <v-card-title primary-title style="flex-direction:column">
               <div class="headline">Create lists</div>
               <div><v-form>
@@ -140,17 +165,17 @@
 
           </v-card>
         </v-flex>
-
-      </v-layout>
-      </v-flex>
-        <v-flex xs3>
-          <v-card class="ml-5" flat>
+ <v-flex xs3>
+          <v-card class="" width="1000px">
             <v-card-title>Activities</v-card-title>
             <div v-for="activity in activitiesbydate" :key="activity.activity_id">
               <div class="overline pa-2" >{{activity.activitytext}}</div>
             </div>
           </v-card>
         </v-flex>
+      </v-layout>
+      </v-flex>
+       
       </v-layout> 
     </v-container>
    
@@ -168,7 +193,15 @@
               </v-col>
                <v-btn color="blue darken-1" text v-model="savecomment" :disabled="savecomment">ADD</v-btn>
         <v-card-text class="mt-4 mb-0">ADD TO CARD </v-card-text>
-        <v-btn large text mt-0 ><v-icon>person</v-icon>MEMBERS</v-btn>
+       <v-col class="d-flex" cols="12" sm="6">
+        <v-select
+          :items="members"
+          label="members"
+          outlined
+          v-model="membermail"
+        ></v-select>
+        <v-btn class="ml-2" @click="assigncard"> ASSIGN</v-btn>
+      </v-col>
         <v-btn large text mt-0 @click="opendate"><v-icon>today</v-icon>DUE DATE</v-btn ><span>{{duedate}}</span>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -204,6 +237,7 @@
         <v-divider></v-divider>
       </v-card>
     </v-dialog>
+  
 </div>
 </template>
 
@@ -220,8 +254,10 @@ components:{
 },
   data(){
     return{
+      progress:false,
     draggingcard:null,
     droppinglist:null,
+    membermail:'',
     drawer: false,
     dialog: false,
     card_details:false,
@@ -247,7 +283,10 @@ components:{
     savedescription:true,
     savecomment:true,
     due:null,
+    assignto:'',
+    assignedby:'',
     duedate:"",
+    count:0,
     username:'',
     isloggedin:false,
     loading:false,
@@ -267,6 +306,8 @@ components:{
     tasks:[],
     lists:[],
     cards:[],
+    assigncards:[],
+    members :[],
     activities:[],
     inprogresstasks:[],
     completedtasks:[],
@@ -291,6 +332,73 @@ components:{
     },
      
   methods:{
+     assigncard(){
+            this.assign_id=this.generateUUID()
+            var user=firebase.auth().currentUser;
+            if(user &&this.susername!=''){
+            db.collection('assignedcards').doc(this.assign_id).set({
+                assignto:this.membermail,
+                board_id:this.bid,
+                 cardname:this.num,
+                 assignedby:user.uid,
+                 
+              })
+              this.susername=''  
+            }
+        },
+    realtime(){
+
+    },
+    date_reminder($date_val){
+        var current_date = new Date();
+        var due_date = new Date($date_val);
+        var days = (due_date - current_date) / (24*3600*1000);
+        // console.log('Date is: '+( (due_date - current_date) / (24*3600*1000)))
+        if(days <= 3){
+          return 'true'
+        }
+        return 'false'
+    },
+    notifications(){
+      var user =firebase.auth().currentUser;
+      this.currentUser=firebase.auth().currentUser.email;
+      db.collection('members').where('assignto','==',user.email).get().then(querySnapshot=>{
+        querySnapshot.forEach(doc=>{
+          const data={
+            'id':doc.id,
+            'asssignto':doc.data().assignto,
+            'board_id':doc.data().board_id,
+            'assignedby':doc.data().assignedby,
+            'cardname':doc.cardname,
+          }
+          alert("Task assinged to ${user.email}")
+          this.assigncards.push(data);
+          this.count=this.count+1;
+          console.log(doc.data())
+        })
+      })
+    },
+    fetchmembers(){
+         this.bid=this.$route.query.slug;
+           this.bid=this.$route.params.slug;
+      db.collection('members').where('board_id','==',this.bid).get().then(querySnapshot=>{
+        querySnapshot.forEach(doc=>{
+          const data={
+            'id':doc.id,
+            'boardname':doc.data().boardname,
+            'board_id':doc.data().board_id,
+            'email':doc.data().email,
+            'member_id':doc.data.member_id,
+            'owner_id':doc.data.owner_id,
+            'username':doc.data.username
+          }
+          this.members.push(doc.data().email);
+          console.log(data);
+          console.log(doc.data())
+        })
+      })
+    },
+
      open_modal(value,cid,cardDescription,duedate){
       this.num = value;
       this.cid = cid;
@@ -331,6 +439,7 @@ components:{
           this.droppinglist=list;
           event.preventDefault();
         },
+
 
         dropcard(){
            var user = firebase.auth().currentUser;
@@ -532,7 +641,8 @@ components:{
           },
           update(){
 
-          }
+          },
+          
   },
   computed:{
     cardsbylistid(){
@@ -548,11 +658,28 @@ components:{
   mounted(){
     this.listTask();
     this.getList();
-    this.getCardUnderList();
     this.getlistactivity();
+    this.date_reminder()
   },
    created(){
-          this.listTask();
+     this.bid=this.$route.query.slug;
+           this.bid=this.$route.params.slug;
+        var user = firebase.auth().currentUser;
+         db.collection('users').doc(user.uid).collection('boards').doc(this.bid).collection('cards').onSnapshot(res=>{
+         const changes=res.docChanges();
+          changes.forEach(change=>{
+            if(change.type=='added'){
+              this.cards.push({...change.doc.data(),
+              id:change.doc.id
+              })
+            }
+          })
+        })
+        
+     
+          // this.listTask();
+          this.fetchmembers();
+          this.notifications();
          
          
   },

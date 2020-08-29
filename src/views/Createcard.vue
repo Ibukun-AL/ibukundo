@@ -18,7 +18,7 @@
     </v-card-text>
 <v-card-actions>
   <v-btn color="primary" text @click="createCardUnderList">ADD</v-btn>
-    <v-btn color="primary" text @click="createCardUnderList">ADD</v-btn>
+ 
     </v-card-actions>
   </v-card>
   </v-flex>
@@ -78,6 +78,21 @@ export default {
     }
     },
     methods:{
+      realtime(){
+         var user = firebase.auth().currentUser;
+         db.collection('users').doc(user.uid).collection('boards').doc(this.$props.bid).collection('cards').onSnapshot(snapshot=>{
+          let changes=snapshot.docChanges();
+          console.log(changes);
+          changes.forEach(change=>{
+            if(change.type=='added'){
+              this.cards.push(change.doc);
+            }
+            else if(change.type=='removed'){
+              console.log()
+            }
+          })
+        })
+    },
       reloadList(){
         
         this.getList();
@@ -117,7 +132,7 @@ export default {
                .set({
                 cardname:this.cardname,
                 card_id:this.card_id,
-                list_id:this.list_id,
+                list_id:this.$props.list_id,
                 board_id:this.$props.bid
               })
                this.createlistactivity(`${user.email} created card ${this.cardname}`)
@@ -126,13 +141,14 @@ export default {
               }
               console.log("Hello 1211 World")
               console.log("ID"+this.$props.bid)
-              this.getList();
+              this.getCardUnderList();
+              this.realtime();
           }, 
           getList(){
            var user = firebase.auth().currentUser;
            this.currentUser=firebase.auth().currentUser.email;
-          //  this.$props.bid=this.$route.query.slug;
-          //  this.$props.bid=this.$route.params.slug;
+           this.$props.bid=this.$route.query.slug;
+           this.$props.bid=this.$route.params.slug;
            db.collection('users').doc(user.uid).collection('boards').doc(this.$props.bid).collection('lists')
            .where('board_id','==',this.$props.bid).get().then(querySnapshot=>{
              querySnapshot.forEach(doc=>{
@@ -188,6 +204,11 @@ export default {
            let uuid = Math.floor(100000 + Math.random() * 900000).toString()
           return uuid
         },
-    }
+    },
+      created(){
+          this.realtime(); 
+         
+         
+  },
 };
 </script>
